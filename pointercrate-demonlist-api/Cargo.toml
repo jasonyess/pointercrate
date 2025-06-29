@@ -13,16 +13,19 @@ pointercrate-demonlist-pages = {path = "../pointercrate-demonlist-pages"}
 pointercrate-core = {path = "../pointercrate-core"}
 pointercrate-core-api = {path = "../pointercrate-core-api"}
 pointercrate-core-pages = {path = "../pointercrate-core-pages"}
+pointercrate-core-macros = {path = "../pointercrate-core-macros"}
 pointercrate-user = {path = "../pointercrate-user"}
 pointercrate-user-api = {path = "../pointercrate-user-api"}
 pointercrate-integrate = {path = "../pointercrate-integrate"}
 sqlx = { version = "0.8", default-features = false, features = [ "runtime-tokio-native-tls", "macros", "postgres", "chrono", "migrate" ] }
 serde_json = "1.0.140"
-log = "0.4.26"
-serde_urlencoded = "0.7.0"
+log = "0.4.27"
 nonzero_ext = "0.3.0"
 reqwest = {version = "0.12.*", features = ["json"]}
-chrono = "0.4.40"
+chrono = "0.4.41"
 serde = "1.0.219"
-governor = "0.8.0"
-rand = "0.9.0"
+governor = "0.10.0"
+rand = "0.9.1"
+
+[features]
+geolocation = ["pointercrate-demonlist-pages/geolocation"]

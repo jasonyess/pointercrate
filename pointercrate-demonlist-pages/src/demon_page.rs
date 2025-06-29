@@ -1,3 +1,4 @@
+use crate::components::P;
 use crate::{
     components::{
         submitter::{submit_panel, RecordSubmitter},
@@ -6,7 +7,8 @@ use crate::{
     statsviewer::stats_viewer_panel,
 };
 use chrono::NaiveDateTime;
-use maud::{html, Markup, PreEscaped};
+use maud::{html, Markup, PreEscaped, Render};
+use pointercrate_core::{localization::tr, trp};
 use pointercrate_core_pages::{head::HeadLike, PageFragment};
 use pointercrate_demonlist::{
     config::{self as list_config, extended_list_size},
@@ -153,7 +155,7 @@ impl DemonPage {
                     (self.demon_panel())
                     div.panel.fade.js-scroll-anim.js-collapse data-anim = "fade" {
                         h2.underlined.pad {
-                            "Position History"
+                            (tr("movements"))
                             span.arrow.hover #history-trigger {}
                         }
                         div.js-collapse-content style="display:none"  {
@@ -163,16 +165,16 @@ impl DemonPage {
                                 tbody #history-table-body {
                                     tr {
                                         th.blue {
-                                            "Date"
+                                            (tr("movements.date"))
                                         }
                                         th.blue {
-                                            "Change"
+                                            (tr("movements.change"))
                                         }
                                         th.blue {
-                                            "New Position"
+                                            (tr("movements-newposition"))
                                         }
                                         th.blue {
-                                            "Reason"
+                                            (tr("movements-reason"))
                                         }
                                     }
                                 }
@@ -207,6 +209,22 @@ impl DemonPage {
         let score100 = self.data.demon.score(100);
         let score_requirement = self.data.demon.score(self.data.demon.requirement);
 
+        let verified_and_published = html! {
+            @if self.data.demon.publisher == self.data.demon.verifier {
+                (PreEscaped(trp!(
+                    "demon-headline.same-verifier-publisher",
+                    ("publisher", P(&self.data.demon.publisher, None).render().into_string())
+                )))
+            }
+            @else {
+                (PreEscaped(trp!(
+                    "demon-headline.unique-verifier-publisher",
+                    ("publisher", P(&self.data.demon.publisher, None).render().into_string()),
+                    ("verifier", P(&self.data.demon.verifier, None).render().into_string())
+                )))
+            }
+        };
+
         html! {
             section.panel.fade.js-scroll-anim data-anim = "fade" {
                 div.underlined {
@@ -229,18 +247,58 @@ impl DemonPage {
                     </script>
                     "#, self.data.demon.base.id)))
                     h3 {
-                        @if self.data.creators.len() > 3 {
-                            "by " (self.data.creators[0].name) " and "
-                            div.tooltip {
-                                "more"
-                                div.tooltiptext.fade {
-                                    (self.data.creators.iter().map(|player| player.name.to_string()).collect::<Vec<_>>().join(", "))
+                        @match &self.data.creators[..] {
+                            [] => { (PreEscaped(trp!(
+                                "demon-headline.no-creators",
+                                ("verified-and-published", verified_and_published.into_string())
+                            ))) },
+                            [creator] => {
+                                @if creator == &self.data.demon.publisher && creator == &self.data.demon.verifier { /* Nothing */ }
+                                @else if creator != &self.data.demon.publisher && creator != &self.data.demon.verifier {
+                                    (PreEscaped(trp!(
+                                        "demon-headline.one-creator",
+                                        ("creator", P(creator, None).render().into_string()),
+                                        ("verified-and-published", verified_and_published.into_string())
+                                    )))
                                 }
+                                @else if creator == &self.data.demon.publisher {
+                                    (PreEscaped(trp!(
+                                        "demon-headline.one-creator-is-publisher",
+                                        ("creator", P(creator, None).render().into_string()),
+                                        ("verifier", P(&self.data.demon.verifier, None).render().into_string())
+                                    )))
+                                }
+                                @else {
+                                    (PreEscaped(trp!(
+                                        "demon-headline.one-creator-is-verifier",
+                                        ("creator", P(creator, None).render().into_string()),
+                                        ("publisher", P(&self.data.demon.publisher, None).render().into_string())
+                                    )))
+                                }
+                            },
+                            [creator1, creator2] => {
+                                (PreEscaped(trp!(
+                                    "demon-headline.two-creators",
+                                    ("creator1", P(creator1, None).render().into_string()),
+                                    ("creator2", P(creator2, None).render().into_string()),
+                                    ("verified-and-published", verified_and_published.into_string())
+                                )))
+                            },
+                            [creator1, rest @ ..] => {
+                                (PreEscaped(trp!(
+                                    "demon-headline.more-creators",
+                                    ("creator", P(creator1, None).render().into_string()),
+                                    ("more", html! {
+                                      div.tooltip.underdotted {
+                                            (tr("demon-headline.more-creators-tooltip"))
+                                            div.tooltiptext.fade {
+                                                (rest.iter().map(|player| player.name.as_ref()).collect::<Vec<_>>().join(", "))
+                                            }
+                                        }
+                                    }.into_string()),
+                                    ("verified-and-published", verified_and_published.into_string())
+                                )))
                             }
-                            ", " (self.data.short_headline())
-                        }
-                        @else {
-                            (self.data.headline())
                         }
                     }
                 }
@@ -262,21 +320,21 @@ impl DemonPage {
                     @if let Some(ref level) = self.integration {
                         span {
                             b {
-                                "Level Password: "
+                                (tr("demon-password"))
                             }
                             br;
                             (level.level_data.password.as_processed().map(|pw| pw.to_string()).unwrap_or("Unknown".to_string()))
                         }
                         span {
                             b {
-                                "Level ID: "
+                                (tr("demon-id"))
                             }
                             br;
                             (level.level_id)
                         }
                         span {
                             b {
-                                "Level length: "
+                                (tr("demon-length"))
                             }
                             br;
                             @match level.level_data.level_data {
@@ -290,7 +348,7 @@ impl DemonPage {
                         }
                         span {
                             b {
-                                "Object count: "
+                                (tr("demon-objects"))
                             }
                             br;
                             @match level.level_data.level_data {
@@ -300,7 +358,7 @@ impl DemonPage {
                         }
                         span {
                             b {
-                                "In-Game Difficulty: "
+                                (tr("demon-difficulty"))
                             }
                             br;
                             @match level.difficulty {
@@ -318,7 +376,7 @@ impl DemonPage {
                         }
                         span {
                             b {
-                                "Created in:"
+                                (tr("demon-gdversion"))
                             }
                             br;
                             (level.gd_version)
@@ -326,7 +384,7 @@ impl DemonPage {
                         @if let Some(ref song) = level.custom_song {
                             span style = "width: 100%"{
                                 b {
-                                    "Newgrounds Song:"
+                                    (tr("demon-ngsong"))
                                 }
                                 br;
                                 @match song.link {
@@ -339,7 +397,7 @@ impl DemonPage {
                     @if position <= list_config::extended_list_size() {
                         span {
                             b {
-                                "Demonlist score (100%): "
+                                (trp!("demon-score", ("percent", 100.0)))
                             }
                             br;
                             (format!("{:.2}", score100))
@@ -348,7 +406,7 @@ impl DemonPage {
                     @if position <= list_config::list_size(){
                         span {
                             b {
-                                "Demonlist score (" (self.data.demon.requirement) "%): "
+                                (trp!("demon-score", ("percent", self.data.demon.requirement)))
                             }
                             br;
                             (format!("{:.2}", score_requirement))
@@ -368,26 +426,22 @@ impl DemonPage {
                 section.records.panel.fade.js-scroll-anim data-anim = "fade" {
                     div.underlined.pad {
                         h2 {
-                            "Records"
+                            (tr("demon-records"))
                         }
                         @if position <= list_config::list_size() {
                             h3 {
-                                (self.data.demon.requirement) "% or better required to qualify"
+                                (trp!("demon-records-qualify", ("percent", self.data.demon.requirement)))
                             }
                         }
                         @else if position <= list_config::extended_list_size() {
                             h3 {
-                                "100% required to qualify"
+                                (trp!("demon-records-qualify", ("percent", 100.0)))
                             }
                         }
                         @if !self.data.records.is_empty() {
                             h4 {
                                 @let records_registered_100_count = self.data.records.iter().filter(|record| record.progress == 100).count();
-                                (self.data.records.len())
-                                " records registered, out of which "
-                                (records_registered_100_count)
-                                @if records_registered_100_count == 1 { " is" } @else { " are" }
-                                " 100%"
+                                (trp!("demon-records-total", ("num-records", self.data.records.len()), ("num-completions", records_registered_100_count)))
                             }
                         }
                     }
@@ -407,13 +461,13 @@ impl DemonPage {
                                 tr {
                                     th.blue {}
                                     th.blue {
-                                        "Record Holder"
+                                        (tr("record-holder"))
                                     }
                                     th.blue {
-                                        "Progress"
+                                        (tr("record-progress"))
                                     }
                                     th.video-link.blue {
-                                        "Video Proof"
+                                        (tr("record-videoproof"))
                                     }
                                 }
                                 @for record in &self.data.records {
@@ -424,17 +478,16 @@ impl DemonPage {
                                             }
                                         }
                                         td {
-                                            @if let Some(ref video) = record.video {
-                                                 a href = (video) target = "_blank"{
-                                                    (record.player.name)
-                                                 }
-                                            }
-                                            @else {
-                                                (record.player.name)
-                                            }
+                                            (P(&record.player, None))
                                         }
                                         td {
-                                            (record.progress) "%"
+                                            @if let Some(ref video) = record.video {
+                                                a.mobile-only-link href = (video) target = "_blank" {
+                                                    (record.progress) "%"
+                                                }
+                                            } @else {
+                                                (record.progress) "%"
+                                            }
                                         }
                                         td.video-link {
                                             @if let Some(ref video) = record.video {

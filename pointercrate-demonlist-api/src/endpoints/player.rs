@@ -1,5 +1,3 @@
-use crate::{config, ratelimits::DemonlistRatelimits};
-use log::warn;
 use pointercrate_core::{error::CoreError, pool::PointercratePool};
 use pointercrate_core_api::{
     error::Result,
@@ -8,9 +6,9 @@ use pointercrate_core_api::{
     query::Query,
     response::Response2,
 };
+use pointercrate_core_macros::localized;
 use pointercrate_demonlist::{
     error::DemonlistError,
-    nationality::Nationality,
     player::{
         claim::{ListedClaim, PatchPlayerClaim, PlayerClaim, PlayerClaimPagination},
         DatabasePlayer, FullPlayer, PatchPlayer, Player, PlayerPagination, RankedPlayer, RankingPagination,
@@ -20,9 +18,8 @@ use pointercrate_demonlist::{
 use pointercrate_user::{auth::ApiToken, MODERATOR};
 use pointercrate_user_api::auth::Auth;
 use rocket::{http::Status, serde::json::Json, State};
-use serde::Deserialize;
-use std::net::IpAddr;
 
+#[localized]
 #[rocket::get("/")]
 pub async fn paginate(
     pool: &State<PointercratePool>, query: Query<PlayerPagination>, auth: Option<Auth<ApiToken>>,
@@ -40,11 +37,13 @@ pub async fn paginate(
     Ok(pagination_response("/api/v1/players/", pagination, &mut *pool.connection().await?).await?)
 }
 
+#[localized]
 #[rocket::get("/ranking")]
 pub async fn ranking(pool: &State<PointercratePool>, query: Query<RankingPagination>) -> Result<Response2<Json<Vec<RankedPlayer>>>> {
     Ok(pagination_response("/api/v1/players/ranking/", query.0, &mut *pool.connection().await?).await?)
 }
 
+#[localized]
 #[rocket::get("/me")]
 pub async fn get_me(auth: Option<Auth<ApiToken>>, pool: &State<PointercratePool>) -> Result<Tagged<FullPlayer>> {
     let Some(auth) = auth else {
@@ -54,24 +53,26 @@ pub async fn get_me(auth: Option<Auth<ApiToken>>, pool: &State<PointercratePool>
     let mut connection = pool.connection().await?;
 
     let user = auth.user.into_user();
-    let Some(player_claim) = PlayerClaim::by_user(user.id, &mut *connection).await? else {
+    let Some(player_claim) = PlayerClaim::by_user(user.id, &mut connection).await? else {
         return Err(CoreError::NotFound.into());
     };
-    let player = Player::by_id(player_claim.player.id, &mut *connection).await?;
-    let full_player = player.upgrade(&mut *connection).await?;
+    let player = Player::by_id(player_claim.player.id, &mut connection).await?;
+    let full_player = player.upgrade(&mut connection).await?;
 
     Ok(Tagged(full_player))
 }
 
+#[localized]
 #[rocket::get("/<player_id>")]
 pub async fn get(player_id: i32, pool: &State<PointercratePool>) -> Result<Tagged<FullPlayer>> {
     let mut connection = pool.connection().await?;
 
     Ok(Tagged(
-        Player::by_id(player_id, &mut *connection).await?.upgrade(&mut *connection).await?,
+        Player::by_id(player_id, &mut connection).await?.upgrade(&mut connection).await?,
     ))
 }
 
+#[localized]
 #[rocket::patch("/<player_id>", data = "<patch>")]
 pub async fn patch(
     player_id: i32, mut auth: Auth<ApiToken>, precondition: Precondition, patch: Json<PatchPlayer>,
@@ -89,6 +90,7 @@ pub async fn patch(
     Ok(Tagged(player))
 }
 
+#[localized]
 #[rocket::put("/<player_id>/claims")]
 pub async fn put_claim(player_id: i32, mut auth: Auth<ApiToken>) -> Result<Response2<Json<PlayerClaim>>> {
     let user_id = auth.user.user().id;
@@ -105,6 +107,7 @@ pub async fn put_claim(player_id: i32, mut auth: Auth<ApiToken>) -> Result<Respo
 /// The `verified` attribute can only be changed by moderator. All other attributes can only be
 /// changed by the person holding the claim, but only if the claim is verified (to claim a different
 /// player, put in a new `PUT` request)
+#[localized]
 #[rocket::patch("/<player_id>/claims/<user_id>", data = "<data>")]
 pub async fn patch_claim(
     player_id: i32, user_id: i32, mut auth: Auth<ApiToken>, data: Json<PatchPlayerClaim>,
@@ -148,6 +151,7 @@ pub async fn patch_claim(
     Ok(Json(claim))
 }
 
+#[localized]
 #[rocket::delete("/<player_id>/claims/<user_id>")]
 pub async fn delete_claim(player_id: i32, user_id: i32, mut auth: Auth<ApiToken>) -> Result<Status> {
     auth.require_permission(MODERATOR)?;
@@ -160,6 +164,7 @@ pub async fn delete_claim(player_id: i32, user_id: i32, mut auth: Auth<ApiToken>
     Ok(Status::NoContent)
 }
 
+#[localized]
 #[rocket::get("/claims")]
 pub async fn paginate_claims(
     mut auth: Auth<ApiToken>, pagination: Query<PlayerClaimPagination>,
@@ -169,22 +174,28 @@ pub async fn paginate_claims(
     Ok(pagination_response("/api/v1/players/claims/", pagination.0, &mut auth.connection).await?)
 }
 
-#[derive(Deserialize, Debug)]
+#[cfg(feature = "geolocation")]
+#[derive(serde::Deserialize, Debug)]
 struct Security {
     is_vpn: bool,
 }
 
-#[derive(Deserialize, Debug)]
+#[cfg(feature = "geolocation")]
+#[derive(serde::Deserialize, Debug)]
 struct GeolocationResponse {
     security: Security,
     country_code: String,
     region_iso_code: Option<String>,
 }
 
+#[cfg(feature = "geolocation")]
+#[localized]
 #[rocket::post("/<player_id>/geolocate")]
 pub async fn geolocate_nationality(
-    player_id: i32, ip: IpAddr, mut auth: Auth<ApiToken>, ratelimits: &State<DemonlistRatelimits>,
-) -> Result<Json<Nationality>> {
+    player_id: i32, ip: std::net::IpAddr, mut auth: Auth<ApiToken>, ratelimits: &State<crate::DemonlistRatelimits>,
+) -> Result<Json<pointercrate_demonlist::nationality::Nationality>> {
+    use pointercrate_demonlist::nationality::Nationality;
+
     let mut player = Player::by_id(player_id, &mut auth.connection).await?;
     let claim = PlayerClaim::get(auth.user.user().id, player_id, &mut auth.connection).await?;
 
@@ -196,7 +207,7 @@ pub async fn geolocate_nationality(
 
     let response = reqwest::get(format!(
         "https://ipgeolocation.abstractapi.com/v1/?api_key={}&ip_address={}&fields=security,country_code,region_iso_code",
-        config::abstract_api_key().ok_or_else(|| CoreError::internal_server_error("No API key for abstract configured"))?,
+        crate::config::abstract_api_key().ok_or_else(|| CoreError::internal_server_error("No API key for abstract configured"))?,
         ip
     ))
     .await
@@ -219,9 +230,11 @@ pub async fn geolocate_nationality(
             .subdivision_by_code(&region, &mut auth.connection)
             .await
             .inspect_err(|err| {
-                warn!(
+                log::warn!(
                     "No subdivision {} for nation {}, or nation does not support subdivisions: {:?}",
-                    region, nationality.iso_country_code, err
+                    region,
+                    nationality.iso_country_code,
+                    err
                 )
             })
             .ok();
