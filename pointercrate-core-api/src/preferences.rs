@@ -93,6 +93,5 @@ impl PreferenceManager {
         }
 
         self
-        //self.preference(config.default.cookie, config.default.fallback.lang.language.as_str())
     }
 }
