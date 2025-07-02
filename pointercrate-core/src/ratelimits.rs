@@ -1,3 +1,4 @@
+//TODO: Usesites of this macro must get localized!
 #[macro_export]
 macro_rules! ratelimits {
     ($struct_name: ident {$($tokens:tt)*}) => {

@@ -1,11 +1,16 @@
-use crate::etag::Tagged;
-use maud::{html, DOCTYPE};
-use pointercrate_core::etag::Taggable;
+use crate::{
+    etag::Tagged,
+    preferences::{ClientPreferences, PreferenceManager},
+};
+use maud::{html, Render, DOCTYPE};
+use pointercrate_core::{etag::Taggable, localization::LANGUAGE};
+use pointercrate_core_pages::localization::LocaleSet;
 use pointercrate_core_pages::{
     head::{Head, HeadLike},
     PageConfiguration, PageFragment,
 };
 use rocket::{
+    futures,
     http::{ContentType, Header, Status},
     response::Responder,
     serde::json::Json,
@@ -30,24 +35,46 @@ impl HeadLike for Page {
 
 impl<'r, 'o: 'r> Responder<'r, 'o> for Page {
     fn respond_to(self, request: &'r Request<'_>) -> rocket::response::Result<'o> {
-        let page_config = request.rocket().state::<PageConfiguration>().ok_or(Status::InternalServerError)?;
+        let preference_manager = request.rocket().state::<PreferenceManager>().ok_or(Status::InternalServerError)?;
+        let locale_set = request.rocket().state::<LocaleSet>().ok_or(Status::InternalServerError)?;
+
+        let preferences = ClientPreferences::from_cookies(request.cookies(), preference_manager);
+
+        let language = preferences.get(locale_set.cookie).ok_or(Status::InternalServerError)?;
+        let locale = locale_set.by_code(language);
+
+        let (page_config, nav_bar, footer) = futures::executor::block_on(async {
+            LANGUAGE
+                .scope(*locale, async {
+                    let page_config = request
+                        .rocket()
+                        .state::<fn() -> PageConfiguration>()
+                        .ok_or(Status::InternalServerError)?();
+
+                    let nav_bar = page_config.nav_bar.render(locale, locale_set);
+                    let footer = page_config.footer.render();
+
+                    Ok((page_config, nav_bar, footer))
+                })
+                .await
+        })?;
 
         let fragment = self.0;
 
         let rendered_fragment = html! {
             (DOCTYPE)
-            html lang="en" prefix="og: http://opg.me/ns#" {
+            html lang=(locale.as_str()) prefix="og: http://opg.me/ns#" {
                 head {
                     (page_config.head)
                     (fragment.head)
                 }
                 body {
                     div.content {
-                        (page_config.nav_bar)
+                        (nav_bar)
                         (fragment.body)
                         div #bg {}
                     }
-                    (page_config.footer)
+                    (footer)
                 }
             }
         }
