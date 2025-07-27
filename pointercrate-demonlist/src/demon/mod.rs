@@ -57,6 +57,9 @@ pub struct Demon {
     /// This is automatically queried based on the level name, but can be manually overridden by a
     /// list mod.
     pub level_id: Option<u64>,
+
+    /// Whether this [`Demon`] has a star rating in Geometry Dash
+    pub rated: bool,
 }
 
 /// Absolutely minimal representation of a demon to be sent when a demon is part of another object
