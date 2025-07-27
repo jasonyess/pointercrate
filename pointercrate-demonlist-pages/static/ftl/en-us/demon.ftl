@@ -46,6 +46,10 @@ demon-publisher = Publisher
 demon-verifier = Verifier
     .validator-valuemissing = Please specify a verifier
 
+demon-rated = Rated
+    .yes = Yes (Rated)
+    .no = No (Unrated)
+
 demon-creators = Creators
 
 demon-headline-by = by { $creator }
@@ -119,6 +123,7 @@ demon-viewer = Demon #
     .requirement-field = { demon-requirement }:
     .publisher-field = { demon-publisher }:
     .verifier-field = { demon-verifier }:
+    .rated-field = { demon-rated }:
     .creators-field = { demon-creators }:
 
 demon-add-panel = Add Demon
@@ -135,6 +140,7 @@ demon-add-form = Add Demon
     .verifier-field = { demon-verifier }:
     .publisher-field = { demon-publisher }:
     .video-field = { demon-video }:
+    .rated-field = { demon-rated }
     .creators-field = { demon-creators }:
 
     .submit = Add Demon
