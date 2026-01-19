@@ -1,4 +1,5 @@
 use crate::localization::LOCALE_COOKIE_NAME;
+use crate::theme::THEME_COOKIE_NAME;
 use crate::{
     etag::Tagged,
     preferences::{ClientPreferences, PreferenceManager},
@@ -43,6 +44,8 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for Page {
         let language = preferences.get(LOCALE_COOKIE_NAME).ok_or(Status::InternalServerError)?;
         let lang_id = LocaleConfiguration::get().by_code(language);
 
+        let theme = preferences.get(THEME_COOKIE_NAME).ok_or(Status::InternalServerError)?;
+
         let (page_config, nav_bar, footer) = block_in_place(move || {
             Handle::current().block_on(async {
                 LANGUAGE
@@ -67,7 +70,7 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for Page {
 
         let rendered_fragment = html! {
             (DOCTYPE)
-            html lang=(lang_id) prefix="og: http://opg.me/ns#" {
+            html lang=(lang_id) data-theme=(theme) prefix="og: http://opg.me/ns#" {
                 head {
                     (page_config.head)
                     (fragment.head)
