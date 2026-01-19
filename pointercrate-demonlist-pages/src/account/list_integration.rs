@@ -1,7 +1,7 @@
 use crate::components::P;
 use log::error;
 use maud::{html, Markup, PreEscaped};
-use pointercrate_core::{error::PointercrateError, localization::tr, permission::PermissionsManager, trp};
+use pointercrate_core::{error::PointercrateError, localization::tr, permission::PermissionsManager, theme::Theme, trp};
 use pointercrate_core_pages::{
     error::ErrorFragment,
     trp_html,
@@ -42,7 +42,7 @@ impl AccountPageTab for ListIntegrationTab {
     }
 
     async fn content(
-        &self, user: &AuthenticatedUser<NonMutating>, permissions: &PermissionsManager, connection: &mut PgConnection,
+        &self, user: &AuthenticatedUser<NonMutating>, permissions: &PermissionsManager, _theme: &Theme, connection: &mut PgConnection,
     ) -> Markup {
         let player_claim = match PlayerClaim::by_user(user.user().id, connection).await {
             Ok(player_claim) => player_claim,

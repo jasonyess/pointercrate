@@ -3,7 +3,7 @@ use crate::components::{
     submitter::{submit_panel, RecordSubmitter},
 };
 use maud::{html, Markup, PreEscaped};
-use pointercrate_core::{error::PointercrateError, localization::tr, permission::PermissionsManager, trp};
+use pointercrate_core::{error::PointercrateError, localization::tr, permission::PermissionsManager, theme::Theme, trp};
 use pointercrate_core_pages::{
     error::ErrorFragment,
     util::{dropdown, paginator},
@@ -44,7 +44,7 @@ impl AccountPageTab for RecordsPage {
     }
 
     async fn content(
-        &self, _user: &AuthenticatedUser<NonMutating>, _permissions: &PermissionsManager, connection: &mut PgConnection,
+        &self, _user: &AuthenticatedUser<NonMutating>, _permissions: &PermissionsManager, _theme: &Theme, connection: &mut PgConnection,
     ) -> Markup {
         // rated+ list consists of ALL demons
         let demons = match current_list(&List::RatedPlus, connection).await {

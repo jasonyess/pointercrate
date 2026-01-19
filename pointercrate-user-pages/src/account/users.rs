@@ -3,6 +3,7 @@ use maud::{html, Markup, PreEscaped};
 use pointercrate_core::{
     localization::tr,
     permission::{Permission, PermissionsManager},
+    theme::Theme,
 };
 use pointercrate_core_pages::util::filtered_paginator;
 use pointercrate_user::{
@@ -44,7 +45,7 @@ impl AccountPageTab for UsersTab {
     }
 
     async fn content(
-        &self, user: &AuthenticatedUser<NonMutating>, permissions: &PermissionsManager, _connection: &mut PgConnection,
+        &self, user: &AuthenticatedUser<NonMutating>, permissions: &PermissionsManager, _theme: &Theme, _connection: &mut PgConnection,
     ) -> Markup {
         let mut assignable_permissions = permissions
             .assignable_by_bits(user.user().permissions)

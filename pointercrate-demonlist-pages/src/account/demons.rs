@@ -1,6 +1,6 @@
 use crate::components::{player_selection_dialog, player_selection_dropdown};
 use maud::{html, Markup, PreEscaped};
-use pointercrate_core::{localization::tr, permission::PermissionsManager};
+use pointercrate_core::{localization::tr, permission::PermissionsManager, theme::Theme};
 use pointercrate_core_pages::trp_html;
 use pointercrate_core_pages::util::filtered_paginator;
 use pointercrate_demonlist::LIST_MODERATOR;
@@ -35,7 +35,7 @@ impl AccountPageTab for DemonsTab {
     }
 
     async fn content(
-        &self, _user: &AuthenticatedUser<NonMutating>, _permissions: &PermissionsManager, _connection: &mut PgConnection,
+        &self, _user: &AuthenticatedUser<NonMutating>, _permissions: &PermissionsManager, _theme: &Theme, _connection: &mut PgConnection,
     ) -> Markup {
         html! {
             div.left {

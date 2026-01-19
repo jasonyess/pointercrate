@@ -1,5 +1,5 @@
 use maud::{html, Markup, PreEscaped};
-use pointercrate_core::{etag::Taggable, permission::PermissionsManager};
+use pointercrate_core::{etag::Taggable, permission::PermissionsManager, theme::Theme};
 use pointercrate_core_pages::{
     head::{HeadLike, Script},
     PageFragment,
@@ -21,7 +21,7 @@ pub trait AccountPageTab {
     fn tab_id(&self) -> u8;
     fn tab(&self) -> Markup;
     async fn content(
-        &self, user: &AuthenticatedUser<NonMutating>, permissions: &PermissionsManager, connection: &mut PgConnection,
+        &self, user: &AuthenticatedUser<NonMutating>, permissions: &PermissionsManager, theme: &Theme, connection: &mut PgConnection,
     ) -> Markup;
 }
 
@@ -37,7 +37,7 @@ impl AccountPageConfig {
     }
 
     pub async fn account_page(
-        &self, user: AuthenticatedUser<NonMutating>, permissions: &PermissionsManager, connection: &mut PgConnection,
+        &self, user: AuthenticatedUser<NonMutating>, permissions: &PermissionsManager, theme: &Theme, connection: &mut PgConnection,
     ) -> AccountPage {
         let mut page = AccountPage {
             user,
@@ -48,7 +48,7 @@ impl AccountPageConfig {
         for tab_config in &self.tabs {
             if tab_config.should_display_for(page.user.user().permissions, permissions) {
                 let tab = tab_config.tab();
-                let content = tab_config.content(&page.user, permissions, connection).await;
+                let content = tab_config.content(&page.user, permissions, theme, connection).await;
 
                 page.scripts.extend(tab_config.additional_scripts());
                 page.scripts.push(Script::module(tab_config.initialization_script()));

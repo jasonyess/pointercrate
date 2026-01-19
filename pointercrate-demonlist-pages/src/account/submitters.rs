@@ -1,5 +1,5 @@
 use maud::{html, Markup, PreEscaped};
-use pointercrate_core::{localization::tr, permission::PermissionsManager};
+use pointercrate_core::{localization::tr, permission::PermissionsManager, theme::Theme};
 use pointercrate_core_pages::util::paginator;
 use pointercrate_demonlist::LIST_MODERATOR;
 use pointercrate_user::auth::{AuthenticatedUser, NonMutating};
@@ -33,7 +33,7 @@ impl AccountPageTab for SubmittersPage {
     }
 
     async fn content(
-        &self, _user: &AuthenticatedUser<NonMutating>, _permissions: &PermissionsManager, _connection: &mut PgConnection,
+        &self, _user: &AuthenticatedUser<NonMutating>, _permissions: &PermissionsManager, _theme: &Theme, _connection: &mut PgConnection,
     ) -> Markup {
         html! {
             div.left {

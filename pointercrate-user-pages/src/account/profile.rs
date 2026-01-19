@@ -3,6 +3,7 @@ use maud::{html, Markup, PreEscaped};
 use pointercrate_core::{
     localization::{task_lang, tr},
     permission::PermissionsManager,
+    theme::Theme,
     trp,
 };
 use pointercrate_core_pages::head::Script;
@@ -47,7 +48,8 @@ impl AccountPageTab for ProfileTab {
     }
 
     async fn content(
-        &self, authenticated_user: &AuthenticatedUser<NonMutating>, permissions: &PermissionsManager, _connection: &mut PgConnection,
+        &self, authenticated_user: &AuthenticatedUser<NonMutating>, permissions: &PermissionsManager, theme: &Theme,
+        _connection: &mut PgConnection,
     ) -> Markup {
         let user = authenticated_user.user();
 
@@ -148,7 +150,7 @@ impl AccountPageTab for ProfileTab {
                             data-callback="googleOauthCallback" {}
 
                         script src=(format!("https://accounts.google.com/gsi/client?hl={}", &lang)) async {}
-                        div .g_id_signin data-text="continue_with" style="margin: 10px 0px" data-locale=(lang) {}
+                        div .g_id_signin data-text="continue_with" data-theme=(theme.as_oauth_button_theme()) style="margin: 10px 0px" data-locale=(lang) {}
                         p.error #g-signin-error style="text-align: left" {}
                     }
                 }

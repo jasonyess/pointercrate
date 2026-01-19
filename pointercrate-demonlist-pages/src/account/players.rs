@@ -1,5 +1,5 @@
 use maud::{html, Markup, PreEscaped};
-use pointercrate_core::{error::PointercrateError, localization::tr, permission::PermissionsManager};
+use pointercrate_core::{error::PointercrateError, localization::tr, permission::PermissionsManager, theme::Theme};
 use pointercrate_core_pages::{error::ErrorFragment, util::filtered_paginator};
 use pointercrate_demonlist::{nationality::Nationality, LIST_MODERATOR};
 use pointercrate_user::auth::{AuthenticatedUser, NonMutating};
@@ -33,7 +33,7 @@ impl AccountPageTab for PlayersPage {
     }
 
     async fn content(
-        &self, _user: &AuthenticatedUser<NonMutating>, _permissions: &PermissionsManager, connection: &mut PgConnection,
+        &self, _user: &AuthenticatedUser<NonMutating>, _permissions: &PermissionsManager, _theme: &Theme, connection: &mut PgConnection,
     ) -> Markup {
         let nationalities = match Nationality::all(connection).await {
             Ok(nationalities) => nationalities,
@@ -126,7 +126,7 @@ impl AccountPageTab for PlayersPage {
                                         br;
                                         div.dropdown-menu.js-search #edit-player-subdivision data-default = "None" {
                                             div{
-                                                input type="text" style = "color: #444446; font-weight: bold;";
+                                                input type="text" style = "font-weight: bold;";
                                             }
                                             div.menu {
                                                 ul {
