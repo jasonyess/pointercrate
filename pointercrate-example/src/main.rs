@@ -1,8 +1,11 @@
 use maud::html;
 use pointercrate_core::localization::LocalesLoader;
 use pointercrate_core::pool::PointercratePool;
+use pointercrate_core::theme::Theme;
 use pointercrate_core::{error::CoreError, localization::tr};
-use pointercrate_core_api::{error::ErrorResponder, maintenance::MaintenanceFairing, preferences::PreferenceManager};
+use pointercrate_core_api::{
+    error::ErrorResponder, maintenance::MaintenanceFairing, preferences::PreferenceManager, theme::THEME_COOKIE_NAME,
+};
 use pointercrate_core_macros::localized_catcher;
 use pointercrate_core_pages::{
     footer::{Footer, FooterColumn, Link},
@@ -133,7 +136,9 @@ async fn rocket() -> _ {
 
     // Define the preferences our website supports. Preferences are sent to us from
     // the client via cookies.
-    let preference_manager = PreferenceManager::default().with_localization();
+    let preference_manager = PreferenceManager::default()
+        .with_localization()
+        .preference(THEME_COOKIE_NAME, Theme::default().as_str());
 
     let rocket = rocket.manage(preference_manager);
 
