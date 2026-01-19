@@ -8,6 +8,7 @@ use crate::{
 };
 use chrono::NaiveDateTime;
 use maud::{html, Markup, PreEscaped};
+use pointercrate_core::theme::Theme;
 use pointercrate_core::{localization::tr, trp};
 use pointercrate_core_pages::{head::HeadLike, trp_html, PageFragment};
 use pointercrate_demonlist::list::List;
@@ -27,6 +28,7 @@ pub struct DemonMovement {
 pub struct DemonPage {
     pub team: Team,
     pub list: List,
+    pub theme: Theme,
     pub demonlist: Vec<Demon>,
     pub data: FullDemon,
     pub movements: Vec<DemonMovement>,
@@ -199,7 +201,7 @@ impl DemonPage {
                     (super::rules_panel())
                     (submit_panel())
                     (stats_viewer_panel(&self.list))
-                    (super::discord_panel())
+                    (super::discord_panel(&self.theme))
                 }
             }
         }

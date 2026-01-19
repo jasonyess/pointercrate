@@ -8,6 +8,7 @@ use crate::{
     statsviewer::stats_viewer_panel,
 };
 use maud::{html, Markup, PreEscaped};
+use pointercrate_core::theme::Theme;
 use pointercrate_core::{localization::tr, trp};
 use pointercrate_core_pages::{head::HeadLike, trp_html, PageFragment};
 use pointercrate_demonlist::list::List;
@@ -20,6 +21,7 @@ use pointercrate_demonlist::{
 pub struct OverviewPage {
     pub team: Team,
     pub list: List,
+    pub theme: Theme,
     pub demonlist: Vec<Demon>,
     pub time_machine: Tardis,
     pub submitter_initially_visible: bool,
@@ -124,7 +126,7 @@ impl OverviewPage {
                     (super::rules_panel())
                     (submit_panel())
                     (stats_viewer_panel(&self.list))
-                    (super::discord_panel())
+                    (super::discord_panel(&self.theme))
                 }
             }
         }

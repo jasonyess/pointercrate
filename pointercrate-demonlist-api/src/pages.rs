@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
+use pointercrate_core_api::theme::ClientTheme;
 use pointercrate_core_macros::localized;
 use rocket::{response::Redirect, State};
 
 use chrono::{DateTime, Datelike, FixedOffset, NaiveDate, Utc};
-use pointercrate_core::{audit::AuditLogEntryType, pool::PointercratePool};
+use pointercrate_core::{audit::AuditLogEntryType, pool::PointercratePool, theme::Theme};
 use pointercrate_core_api::{
     error::Result,
     response::{Page, Response2},
@@ -36,8 +37,8 @@ use crate::list::{self, ClientList};
 #[localized]
 #[rocket::get("/<list>/?<timemachine>&<submitter>")]
 pub async fn overview(
-    pool: &State<PointercratePool>, timemachine: Option<bool>, submitter: Option<bool>, list: ClientList, cookies: &CookieJar<'_>,
-    auth: Option<Auth<NonMutating>>,
+    pool: &State<PointercratePool>, timemachine: Option<bool>, submitter: Option<bool>, list: ClientList, theme: ClientTheme,
+    cookies: &CookieJar<'_>, auth: Option<Auth<NonMutating>>,
 ) -> Result<Page> {
     // A few months before pointercrate first went live - definitely the oldest data we have
     let beginning_of_time = NaiveDate::from_ymd_opt(2017, 1, 4).unwrap().and_hms_opt(0, 0, 0).unwrap();
@@ -87,6 +88,7 @@ pub async fn overview(
                 helpers: User::by_permission(LIST_HELPER, &mut connection).await?,
             },
             list: list.0,
+            theme: theme.0,
             demonlist,
             time_machine: tardis,
             submitter_initially_visible: submitter.unwrap_or(false),
@@ -119,7 +121,7 @@ pub async fn demon_permalink(demon_id: i32, pool: &State<PointercratePool>, list
 #[localized]
 #[rocket::get("/<list>/<position>/", rank = 2)]
 pub async fn demon_page(
-    position: i16, pool: &State<PointercratePool>, gd: &State<GeometryDashConnector>, list: ClientList,
+    position: i16, pool: &State<PointercratePool>, gd: &State<GeometryDashConnector>, list: ClientList, theme: ClientTheme,
 ) -> Result<Page> {
     let mut connection = pool.connection().await?;
 
@@ -175,6 +177,7 @@ pub async fn demon_page(
             },
             demonlist: current_list(&list.0, &mut connection).await?,
             list: list.0,
+            theme: theme.0,
             movements: modifications,
             integration: gd.load_level_for_demon(&full_demon.demon).await,
             data: full_demon,
@@ -207,7 +210,7 @@ pub async fn nation_stats_viewer(list: ClientList) -> Page {
 
 #[localized]
 #[rocket::get("/<list>/statsviewer/heatmap.css")]
-pub async fn heatmap_css(list: ClientList, pool: &State<PointercratePool>) -> Result<Response2<String>> {
+pub async fn heatmap_css(list: ClientList, pool: &State<PointercratePool>, theme: ClientTheme) -> Result<Response2<String>> {
     let mut connection = pool.connection().await?;
     let mut css = String::new();
 
@@ -232,7 +235,7 @@ pub async fn heatmap_css(list: ClientList, pool: &State<PointercratePool>) -> Re
     };
 
     for (nation, &score) in &nation_scores {
-        css.push_str(&make_css_rule(&list.0, &nation.to_lowercase(), score, max_nation_score));
+        css.push_str(&make_css_rule(&list.0, &theme.0, &nation.to_lowercase(), score, max_nation_score));
     }
 
     // un-borrow `connection`
@@ -251,6 +254,7 @@ pub async fn heatmap_css(list: ClientList, pool: &State<PointercratePool>) -> Re
 
         css.push_str(&make_css_rule(
             &list.0,
+            &theme.0,
             &format!("{}-{}", row.nation, row.iso_code),
             row.score.unwrap(),
             *nation_scores.get(&row.nation).unwrap_or(&f64::INFINITY),
@@ -260,10 +264,15 @@ pub async fn heatmap_css(list: ClientList, pool: &State<PointercratePool>) -> Re
     Ok(Response2::new(css).with_header("Content-Type", "text/css"))
 }
 
-fn make_css_rule(list: &List, code: &str, score: f64, highest_score: f64) -> String {
+fn make_css_rule(list: &List, theme: &Theme, code: &str, score: f64, highest_score: f64) -> String {
     // Artificially adjust the highest score so that score/high_score is never 1. If it were 1, the resulting
     // color will be equal to the "hover"/"selected" color, which looks bad.
     let highest_score = highest_score * 1.5;
+
+    let base_rgb: [i32; 3] = match theme {
+        Theme::Light => [0xda, 0xdc, 0xe0],
+        Theme::Dark => [0x25, 0x2d, 0x3c],
+    };
 
     let target_rgb: [i32; 3] = match list {
         List::Demonlist => [0x08, 0x81, 0xc6],
@@ -273,8 +282,8 @@ fn make_css_rule(list: &List, code: &str, score: f64, highest_score: f64) -> Str
     format!(
         ".heatmapped #{0}, .heatmapped #{0} > path {{ fill: rgb({1}, {2}, {3}); }}",
         code,
-        0xda as f64 + (target_rgb[0] - 0xda) as f64 * (score / highest_score),
-        0xdc as f64 + (target_rgb[1] - 0xdc) as f64 * (score / highest_score),
-        0xe0 as f64 + (target_rgb[2] - 0xe0) as f64 * (score / highest_score),
+        base_rgb[0] as f64 + (target_rgb[0] - base_rgb[0]) as f64 * (score / highest_score),
+        base_rgb[1] as f64 + (target_rgb[1] - base_rgb[1]) as f64 * (score / highest_score),
+        base_rgb[2] as f64 + (target_rgb[2] - base_rgb[2]) as f64 * (score / highest_score),
     )
 }
