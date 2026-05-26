@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use pointercrate_core_macros::localized;
+use pointercrate_core_macros::{localized, themed};
 use rocket::{response::Redirect, State};
 
 use chrono::{DateTime, Datelike, FixedOffset, NaiveDate, Utc};
