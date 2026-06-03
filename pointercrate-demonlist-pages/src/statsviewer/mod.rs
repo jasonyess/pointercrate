@@ -25,13 +25,9 @@ pub(crate) fn stats_viewer_panel(list: &List) -> Markup {
 }
 
 fn world_map() -> Markup {
-    let map = include_str!("../../static/images/world.svg").to_string();
-
     html! {
         div #world-map-wrapper {
-            div #world-map style="min-width:100%"  {
-                (PreEscaped(map))
-            }
+            object style="min-width:100%" #world-map data="/static/demonlist/images/world.svg" type="image/svg+xml" alt="World map showing the global demonlist score distribution" {}
         }
     }
 }

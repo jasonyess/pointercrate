@@ -4,7 +4,7 @@ use pointercrate_core_macros::{localized, themed};
 use rocket::{response::Redirect, State};
 
 use chrono::{DateTime, Datelike, FixedOffset, NaiveDate, Utc};
-use pointercrate_core::{audit::AuditLogEntryType, pool::PointercratePool};
+use pointercrate_core::{audit::AuditLogEntryType, pool::PointercratePool, theme::Theme};
 use pointercrate_core_api::{
     error::Result,
     response::{Page, Response2},
@@ -34,6 +34,7 @@ use sqlx::PgConnection;
 use crate::list::{self, ClientList};
 
 #[localized]
+#[themed]
 #[rocket::get("/<list>/?<timemachine>&<submitter>")]
 pub async fn overview(
     pool: &State<PointercratePool>, timemachine: Option<bool>, submitter: Option<bool>, list: ClientList, cookies: &CookieJar<'_>,
@@ -105,18 +106,20 @@ async fn claimed_full_player(user: &User, connection: &mut PgConnection) -> Opti
     player.upgrade(connection).await.ok()
 }
 
+#[localized]
 #[rocket::get("/<list>/permalink/<demon_id>/")]
 pub async fn demon_permalink(demon_id: i32, pool: &State<PointercratePool>, list: ClientList) -> Result<Redirect> {
     let mut connection = pool.connection().await?;
 
     let demon = MinimalDemon::by_id(demon_id, &mut connection).await?;
 
-    let position = demon.position(&list.0).unwrap_or(demon.position);
+    let position = demon.position(&list.0).ok_or(DemonlistError::DemonNotFound { demon_id })?;
 
     Ok(Redirect::to(rocket::uri!("/", demon_page(&list.0.as_str(), position))))
 }
 
 #[localized]
+#[themed]
 #[rocket::get("/<list>/<position>/", rank = 2)]
 pub async fn demon_page(
     position: i16, pool: &State<PointercratePool>, gd: &State<GeometryDashConnector>, list: ClientList,
@@ -183,6 +186,7 @@ pub async fn demon_page(
 }
 
 #[localized]
+#[themed]
 #[rocket::get("/<list>/statsviewer/", rank = 1)]
 pub async fn stats_viewer(pool: &State<PointercratePool>, list: ClientList) -> Result<Page> {
     let mut connection = pool.connection().await?;
@@ -197,6 +201,7 @@ pub async fn stats_viewer(pool: &State<PointercratePool>, list: ClientList) -> R
 }
 
 #[localized]
+#[themed]
 #[rocket::get("/<list>/statsviewer/nations/")]
 pub async fn nation_stats_viewer(list: ClientList) -> Page {
     Page::new(list::inject_list_context(
@@ -205,7 +210,6 @@ pub async fn nation_stats_viewer(list: ClientList) -> Page {
     ))
 }
 
-#[localized]
 #[rocket::get("/<list>/statsviewer/heatmap.css")]
 pub async fn heatmap_css(list: ClientList, pool: &State<PointercratePool>) -> Result<Response2<String>> {
     let mut connection = pool.connection().await?;
@@ -265,16 +269,30 @@ fn make_css_rule(list: &List, code: &str, score: f64, highest_score: f64) -> Str
     // color will be equal to the "hover"/"selected" color, which looks bad.
     let highest_score = highest_score * 1.5;
 
-    let target_rgb: [i32; 3] = match list {
-        List::Demonlist => [0x08, 0x81, 0xc6],
-        List::RatedPlus => [0xb3, 0x02, 0x05],
+    let color = |theme: Theme, i: usize| -> f64 {
+        let base_rgb = match theme {
+            Theme::Light => [0xda, 0xdc, 0xe0],
+            Theme::Dark => [0x25, 0x2d, 0x3c],
+        };
+        let target_rgb = match list {
+            List::Demonlist => [0x08, 0x81, 0xc6],
+            List::RatedPlus => [0xb3, 0x02, 0x05],
+        };
+
+        base_rgb[i] as f64 + (target_rgb[i] - base_rgb[i]) as f64 * (score / highest_score)
     };
 
     format!(
-        ".heatmapped #{0}, .heatmapped #{0} > path {{ fill: rgb({1}, {2}, {3}); }}",
+        r#"
+            .heatmapped #{0}, .heatmapped #{0} > path {{ fill: rgb({1}, {2}, {3}); }}
+            :root[data-theme="dark"] #{0}, :root[data-theme="dark"] #{0} > path {{ fill: rgb({4}, {5}, {6}); }}
+        "#,
         code,
-        0xda as f64 + (target_rgb[0] - 0xda) as f64 * (score / highest_score),
-        0xdc as f64 + (target_rgb[1] - 0xdc) as f64 * (score / highest_score),
-        0xe0 as f64 + (target_rgb[2] - 0xe0) as f64 * (score / highest_score),
+        color(Theme::Light, 0),
+        color(Theme::Light, 1),
+        color(Theme::Light, 2),
+        color(Theme::Dark, 0),
+        color(Theme::Dark, 1),
+        color(Theme::Dark, 2),
     )
 }

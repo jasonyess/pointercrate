@@ -1,5 +1,5 @@
 use crate::statsviewer::{stats_viewer_html, StatsViewerRow};
-use maud::{html, Markup, PreEscaped};
+use maud::{html, Markup};
 use pointercrate_core::localization::tr;
 use pointercrate_core_pages::{head::HeadLike, PageFragment};
 use pointercrate_demonlist::list::List;
@@ -14,9 +14,6 @@ pub fn nation_based_stats_viewer(list: &List) -> PageFragment {
     .module("/static/demonlist/js/statsviewer/nation.js")
     .stylesheet("/static/demonlist/css/statsviewer.css")
     .stylesheet("/static/core/css/sidebar.css")
-    .head(html! {
-        (PreEscaped(format!(r#"<link href="/{0}/statsviewer/heatmap.css" rel="stylesheet" type="text/css"/>"#, &list.as_str())))
-    })
     .body(nation_based_stats_viewer_html(list))
 }
 
