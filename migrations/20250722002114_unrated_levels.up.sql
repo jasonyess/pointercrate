@@ -34,7 +34,7 @@ CREATE VIEW score_giving AS
     FROM records
     INNER JOIN demons
     ON demons.id = records.demon
-    WHERE records.status_ = 'APPROVED' AND (demons.position <= 75 OR demons.rated_position <= 75 OR records.progress = 100)
+    WHERE records.status_ = 'APPROVED' AND (demons.position <= 75 OR records.progress = 100)
 
 	UNION
 
@@ -42,7 +42,7 @@ CREATE VIEW score_giving AS
     FROM records
     INNER JOIN demons
     ON demons.id = records.demon
-    WHERE demons.rated = TRUE AND records.status_ = 'APPROVED' AND (demons.position <= 75 OR demons.rated_position <= 75 OR records.progress = 100) 
+    WHERE demons.rated = TRUE AND records.status_ = 'APPROVED' AND (demons.rated_position <= 75 OR records.progress = 100)
 
     UNION
 
@@ -66,16 +66,17 @@ $$ LANGUAGE SQL;
 CREATE OR REPLACE FUNCTION recompute_player_scores() RETURNS void AS $$
     UPDATE players
     SET score = COALESCE(q.score, 0), ratedplus_score = COALESCE(q.ratedplus_score, 0)
-    FROM (
-        SELECT player, 
+    FROM players p
+    LEFT JOIN (
+        SELECT player,
         SUM(record_score(progress, position, 150, requirement))
             FILTER (WHERE NOT rated_list) AS ratedplus_score,
         SUM(record_score(progress, position, 150, requirement))
             FILTER (WHERE rated_list) AS score
         FROM score_giving
         GROUP BY player
-    ) q
-    WHERE q.player = id;
+    ) q ON q.player = p.id
+    WHERE players.id = p.id;
 $$ LANGUAGE SQL;
 
 DROP FUNCTION score_of_nation(VARCHAR(2));
@@ -93,7 +94,8 @@ $$ LANGUAGE SQL;
 CREATE OR REPLACE FUNCTION recompute_nation_scores() RETURNS void AS $$
     UPDATE nationalities
     SET score = COALESCE(p.score, 0), ratedplus_score = COALESCE(p.ratedplus_score, 0)
-    FROM (
+    FROM nationalities n
+    LEFT JOIN (
         SELECT nationality,
         SUM(record_score(q.progress, q.position, 150, q.requirement))
             FILTER (WHERE q.rated_list) AS score,
@@ -101,14 +103,14 @@ CREATE OR REPLACE FUNCTION recompute_nation_scores() RETURNS void AS $$
             FILTER (WHERE NOT q.rated_list) AS ratedplus_score
         FROM (
             SELECT DISTINCT ON (position, nationality, rated_list) * from score_giving
-            INNER JOIN players 
+            INNER JOIN players
                     ON players.id = player
             WHERE players.nationality IS NOT NULL
             ORDER BY players.nationality, position, rated_list, progress DESC
         ) q
         GROUP BY nationality
-    ) p
-    WHERE p.nationality = iso_country_code
+    ) p ON p.nationality = n.iso_country_code
+    WHERE nationalities.iso_country_code = n.iso_country_code
 $$ LANGUAGE SQL;
 
 DROP FUNCTION score_of_subdivision(VARCHAR(2), VARCHAR(3));
@@ -128,7 +130,8 @@ $$ LANGUAGE SQL;
 CREATE OR REPLACE FUNCTION recompute_subdivision_scores() RETURNS void AS $$
     UPDATE subdivisions
     SET score = COALESCE(p.score, 0), ratedplus_score = COALESCE(p.ratedplus_score, 0)
-    FROM (
+    FROM subdivisions s
+    LEFT JOIN (
         SELECT nationality, subdivision,
             SUM(record_score(q.progress, q.position, 150, q.requirement))
                 FILTER (WHERE q.rated_list) AS score,
@@ -136,16 +139,15 @@ CREATE OR REPLACE FUNCTION recompute_subdivision_scores() RETURNS void AS $$
                 FILTER (WHERE NOT q.rated_list) AS ratedplus_score
         FROM (
             SELECT DISTINCT ON (position, nationality, subdivision, rated_list) * from score_giving
-            INNER JOIN players 
+            INNER JOIN players
                     ON players.id=player
             WHERE players.nationality IS NOT NULL
               AND players.subdivision IS NOT NULL
             ORDER BY players.nationality, players.subdivision, position, rated_list, progress DESC
         ) q
         GROUP BY nationality, subdivision
-    ) p
-    WHERE p.nationality = nation
-      AND p.subdivision = iso_code
+    ) p ON p.nationality = s.nation AND p.subdivision = s.iso_code
+    WHERE subdivisions.nation = s.nation AND subdivisions.iso_code = s.iso_code
 $$ LANGUAGE SQL;
 
 SELECT recompute_player_scores();
@@ -161,7 +163,7 @@ SELECT
     CASE WHEN ratedplus_score != 0 THEN RANK() OVER (ORDER BY ratedplus_score DESC) END AS ratedplus_rank,
     id
 FROM players
-WHERE ratedplus_score != 0 OR score != 0 AND NOT banned;
+WHERE (ratedplus_score != 0 OR score != 0) AND NOT banned;
 
 CREATE UNIQUE INDEX player_ranks_id_idx ON player_ranks(id);
 

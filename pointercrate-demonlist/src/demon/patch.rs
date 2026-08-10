@@ -137,10 +137,12 @@ impl Demon {
             .await?;
 
         sqlx::query!("UPDATE demons SET requirement = $1 WHERE id = $2", requirement, self.base.id)
-            .execute(connection)
+            .execute(&mut *connection)
             .await?;
 
         self.requirement = requirement;
+
+        recompute_scores(connection).await?;
 
         Ok(())
     }

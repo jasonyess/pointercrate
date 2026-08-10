@@ -22,17 +22,17 @@ LEFT OUTER JOIN (
     SELECT DISTINCT ON (id) id, CASE WHEN is_rated_list THEN rated_position ELSE position END AS position
     FROM demon_modifications
     WHERE time >= $2 AND (
-        (is_rated_list AND rated_position IS NOT NULL) 
+        (is_rated_list AND rated_position IS NOT NULL)
         OR (NOT is_rated_list AND position != -1)
     )
-    ORDER BY id, time
+    ORDER BY id, time, audit_id
 ) t
 ON demons.id = t.id
 LEFT OUTER JOIN (
     SELECT DISTINCT ON (id) id, rated
     FROM demon_modifications
     WHERE time >= $2 AND rated IS NOT NULL
-    ORDER BY id, time
+    ORDER BY id, time, audit_id
 ) r
 ON demons.id = r.id
 WHERE NOT EXISTS (SELECT 1 FROM demon_additions WHERE demon_additions.id = demons.id AND time >= $2)
