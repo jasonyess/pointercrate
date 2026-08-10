@@ -5,6 +5,7 @@ use pointercrate_core::theme::Theme;
 use pointercrate_core::{error::CoreError, localization::tr};
 use pointercrate_core_api::{error::ErrorResponder, maintenance::MaintenanceFairing, preferences::PreferenceManager};
 use pointercrate_core_macros::localized_catcher;
+use pointercrate_core_pages::navigation::NavigationBarLogo;
 use pointercrate_core_pages::{
     footer::{Footer, FooterColumn, Link},
     navigation::{NavigationBar, TopLevelNavigationBarItem},
@@ -196,7 +197,7 @@ async fn rocket() -> _ {
 fn page_configuration() -> PageConfiguration {
     // Define a navigation bar with only two items, a link to the user account page,
     // and a link to your demonlist.
-    let nav_bar = NavigationBar::new("/static/images/path/to/your/logo.png")
+    let nav_bar = NavigationBar::new(NavigationBarLogo::ImagePath("/static/images/path/to/your/logo.png"))
         .with_item(
             TopLevelNavigationBarItem::new(
                 Some("/ratedplus/"),

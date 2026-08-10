@@ -84,7 +84,8 @@ html[data-theme="dark"] {
 
   --color-link: #1ca4f3;
 
-  --color-border: #4d5566;
+  --color-border: #393f4e;
+  --color-border-broken: #8a8a8a;
 
   --color-imp-button-bg: #c0070a;
   --color-imp-button-bg-hover: #bd1e20;
@@ -138,6 +139,12 @@ body {
 
 body {
   font-family: "Montserrat", sans-serif;
+}
+
+.logo {
+  height: 15px;
+  width: auto;
+  display: inline-block;
 }
 
 /* input elements are weird about their font */
