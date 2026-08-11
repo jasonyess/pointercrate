@@ -23,7 +23,11 @@ export function transitionTheme(newTheme, doc, head, toggleFn) {
     toggleFn();
     
     // re-enable css transitions
-    requestAnimationFrame(() => original ? css.textContent = original : head.removeChild(css));
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            original ? (css.textContent = original) : head.removeChild(css);
+        });
+    });
 }
 
 $(window).on("load", function () {
